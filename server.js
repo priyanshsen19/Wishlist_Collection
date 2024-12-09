@@ -60,11 +60,11 @@ app.post('/add-to-collection', async (req, res) => {
 });
 
 // API: Get Collection List
-app.get('/collections/:user_id', async (req, res) => {
-    const user_id = req.params.user_id;
+app.get('/collections/:user_email', async (req, res) => {
+    const user_email = req.params.user_id;
     const db = getDB();
     try {
-        const results = await db.collection('user_details').find({ user_id }).toArray();
+        const results = await db.collection('user_details').find({ user_email }).toArray();
         res.status(200).send(results);
     } catch (err) {
         res.status(500).send({ error: err.message });
