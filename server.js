@@ -16,7 +16,7 @@ function getCollection_id() {
 // API: Add Product to Collection
 app.post('/add-to-collection', async (req, res) => {
     const { user_email, collection_name, sku } = req.body;
-    const likes = 0, dislikes = 0;
+    const likes = 0, dislikes = 0, likes_email_ids = [], dislikes_email_ids = [];
     const collection_id = getCollection_id();
     const created_at = new Date();
     const updated_at = new Date();
@@ -58,6 +58,8 @@ app.post('/add-to-collection', async (req, res) => {
             dislikes,
             created_at,
             updated_at,
+            likes_email_ids,
+            dislikes_email_ids
         });
         res.status(201).send({ message: 'Product added to collection successfully' });
     } catch (err) {
@@ -73,8 +75,10 @@ app.get('/collections/:user_email', async (req, res) => {
     try {
         const results = await db.collection('user_details').find({ user_email }).toArray();
         if (results.length > 0) {
-            const collectionNames = results.map(item => item.collection_name);
-            res.status(200).send(collectionNames);
+            const collections = results.map(item => ({
+                [item.collection_name]: item.sku_list
+            }));
+            res.status(200).send(collections);
         } else {
             res.status(404).send({ error: 'No collections found for the provided user_email' });
         }
@@ -114,7 +118,9 @@ app.get('/collection-details/:user_email', async (req, res) => {
                         result[collection_id].sku_list.push({
                             sku,
                             likes: collectionDetail.likes,
-                            dislikes: collectionDetail.dislikes
+                            likes_email_ids: collectionDetail.likes_email_ids,
+                            dislikes: collectionDetail.dislikes,
+                            dislikes_email_ids: collectionDetail.dislikes_email_ids
                         });
                     }
                 });
@@ -126,10 +132,9 @@ app.get('/collection-details/:user_email', async (req, res) => {
     }
 });
 
-
 // API: Update Collection Details (Increment Like/Dislike)
 app.put('/update-collection-details', async (req, res) => {
-    const { collection_id, sku, action, user_email } = req.body;
+    const { collection_id, sku, action, user_email, submitter } = req.body;
     const updated_at = new Date();
     const db = getDB();
 
@@ -139,22 +144,25 @@ app.put('/update-collection-details', async (req, res) => {
         }
         const updateField = action === 'like' ? 'likes' : 'dislikes';
         const incrementValue = 1;
+        const arrayField = action === 'like' ? 'likes_email_ids' : 'dislikes_email_ids';
         const result = await db.collection('collections').updateOne(
             { collection_id, sku, user_email },
             { 
                 $inc: { [updateField]: incrementValue },
-                $set: { updated_at }
+                $set: { updated_at },
+                $addToSet: { [arrayField]: submitter }
             }
         );
         if (result.matchedCount === 0) {
             return res.status(404).send({ error: 'No matching SKU found for the user in the collection.' });
         }
-
         res.status(200).send({ message: 'Collection details updated successfully' });
     } catch (err) {
         res.status(500).send({ error: err.message });
     }
 });
+
+
 connectDB().then(() => {
     http.listen(PORT,function(){
         console.log(`Server running on http://localhost:3000`);
