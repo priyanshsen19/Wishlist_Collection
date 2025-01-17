@@ -1,4 +1,5 @@
 Deployed on this Server https://hackathon-1-hml5.onrender.com
+
 API: Add Product to Collection
 url/add-to-collection
 params => { user_email, collection_name, sku }
